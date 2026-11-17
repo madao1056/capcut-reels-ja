@@ -12,6 +12,8 @@ spec の書式（相対パスは spec ファイルの場所から、~ も使え�
   "texts": [ {"text": "38cm", "start": 0, "dur": 1.5, "size": 24, "color": "#FFE14D",
               "x": 0, "y": 0.3, "track": "sub", "intro": "pop-up", "intro_dur": 0.25,
               "shadow": 0.6, "keyframes": [ {"property": "scale", "time": 0, "value": 1} ],
+              "look": {"font": "mincho", "spacing": -1, "opacity": 0.85, "shadow_color": "#2A2A2A",
+                       "shadow_alpha": 0.5, "kana_scale": 0.8, "bg_color": "#333333", "bg_alpha": 0.7, "bg_radius": 0.3},
               "keyframes_jsonl": "kf.jsonl"} ],
   "audio": [ {"file": "bgm.mp3", "start": 0, "dur": 12.6, "volume": 0.18, "track": "sfx",
               "fade_out": 0.8} ],
@@ -57,6 +59,8 @@ def build(spec, base=".", name=None, drafts=None, log=print):
         text_ids.append(seg)
         if "shadow" in t:
             d.text_shadow(seg, t["shadow"])
+        if "look" in t:   # 書体・文字間隔・透け・影の色・背景ボックス・ひらがな縮小
+            d.text_look(seg, **t["look"])
         if t.get("intro") or t.get("outro"):
             d.text_anim(seg, intro=t.get("intro"), intro_dur=t.get("intro_dur", 0.25),
                         outro=t.get("outro"), outro_dur=t.get("outro_dur", 0.25))

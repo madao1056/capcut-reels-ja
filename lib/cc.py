@@ -97,6 +97,24 @@ class Draft:
         lines = "\n".join(json.dumps({**r, "time": _sec(r["time"])}) for r in rows) + "\n"
         _run(CRJ + ["keyframes", self.path, seg], stdin=lines)
 
+    def text_look(self, seg, font=None, spacing=None, opacity=None, shadow_color=None, shadow_alpha=None,
+                  shadow_blur=40, shadow_distance=5, no_shadow=False, bg_color=None, bg_alpha=0.8, bg_radius=0.0,
+                  bg_pad=0.14, kana_scale=None):
+        """書体・文字間隔・透け・影・背景ボックス・ひらがなの縮小（crj text-look）。"""
+        cmd = CRJ + ["text-look", self.path, "--ids", seg]
+        for k, v in (("--font", font), ("--spacing", spacing), ("--opacity", opacity),
+                     ("--shadow-color", shadow_color), ("--shadow-alpha", shadow_alpha), ("--bg-color", bg_color),
+                     ("--kana-scale", kana_scale)):
+            if v is not None:
+                cmd += [k, str(v)]
+        if shadow_color or shadow_alpha is not None:
+            cmd += ["--shadow-blur", str(shadow_blur), "--shadow-distance", str(shadow_distance)]
+        if bg_color:
+            cmd += ["--bg-alpha", str(bg_alpha), "--bg-radius", str(bg_radius), "--bg-pad", str(bg_pad)]
+        if no_shadow:
+            cmd.append("--no-shadow")
+        _run(cmd)
+
     def text_border(self, seg, width=0.08, color="#000000", shadow_alpha=None):
         cmd = ["capcut", "text-style", self.path, seg, "--border-width", str(width), "--border-color", color, "-q"]
         if shadow_alpha is not None:

@@ -16,6 +16,8 @@ capcut-cli（0.34.0）のまま使うと CapCut 9.8.0 で思った通りにな�
 | CapCut で開くと「インターフェースをロード中」のまま止まる | 切り替え・文字アニメなどの効果の場所が空だと、CapCut がネットから取り直す。その取得が止まると先へ進まない | `crj.py fill-effects`（手元のキャッシュの場所を書く。`build.py` が自動で行う）。手元に無い効果は、CapCut の画面で一度使うとキャッシュされる |
 | 簡易プレビューに拡大・テロップが出ない | `render` が拡大を反映せず、文字を描かない | CapCut の画面で確かめる |
 
+| 透け・影の色・背景の箱・書体を書いても見た目が変わらない | CapCut は影を文字スタイル側（`styles[].shadows`）で描き、背景の箱は素材の `check_flag` の印が無いと描かない | `crj.py text-look`（CapCut の画面で設定して保存された形に合わせて書く） |
+
 本家で直るべきもの（拡大キーフレーム・縁取り・`segments`）は報告する。直ったら `lib/` から外す。
 
 ## 座標と大きさ
@@ -32,3 +34,14 @@ CapCut は保存のときに音の長さなどを 1/30 秒単位に丸めるこ�
 - 新しい下書き: `draft_content.json`・`draft_info.json`・`template-2.tmp`
 - CapCut で一度開いた下書き: 上に加えて `Timelines/<id>/` の中にも同じものができる
 - どれか 1 つだけ書き換えると食い違う。`lib/crj.py` は全部を書き換える
+
+## テキストの見た目（CapCut 9.8.0 の画面で設定して保存された形）
+| 画面の設定 | 下書きの中 |
+|---|---|
+| フォント | 文字スタイル `styles[].font.path` と素材の `font_path`。macOS の書体ファイルを直接指せる（例: ヒラギノ明朝 ProN） |
+| 太字 | `styles[].bold`（素材の `bold_width` 0.008） |
+| 文字（文字間隔） | 素材の `letter_spacing`。画面の値の 1/20（−1 → −0.05） |
+| 不透明度 | 素材の `global_alpha`（85% → 0.85） |
+| シャドウ | `styles[].shadows[]`（`alpha`・`distance`・`angle`・`diffuse`＝不鮮明さ%÷600・色）と素材の `has_shadow` ほか。`check_flag` に 16 |
+| 背景 | 素材の `background_style` 1・`background_color`・`background_alpha`・`background_round_radius`・`background_width/height`（余白）。`check_flag` に 32 |
+| 文字ごとの大きさ | `styles[]` を文字の区間（`range`）ごとに分け、`size` を変える |

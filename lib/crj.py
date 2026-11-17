@@ -10,6 +10,9 @@
   set-clip     <draft> <seg-id>... --scale S [--x X] [--y Y]   拡大率・位置の固定値
   keyframes    <draft> <seg-id>   (stdin: JSONL)      キーフレームを書く（scale は scale_x と scale_y に分ける）
   text-stroke  <draft> [--ids ...] [--width W] [--color #RRGGBB] [--no-bold]   縁取り・太字
+  text-look    <draft> --ids ... [--font mincho|gothic|maru|<path>] [--spacing N] [--opacity A]
+               [--shadow-color #RRGGBB --shadow-alpha A --shadow-blur P --shadow-distance D] [--no-shadow]
+               [--bg-color #RRGGBB --bg-alpha A --bg-radius R] [--kana-scale S]   書体・文字間隔・透け・影・背景・かな縮小
   fix-duration <draft>                                下書き全体の尺を、最後のセグメントの終わりに合わせる
   fill-effects <draft>                                切り替え・文字アニメなどの効果に、手元のキャッシュの場所を書く
   info         <draft>                                書き込み対象のファイルと、CapCut の起動状態を表示
@@ -242,6 +245,108 @@ def cmd_text_stroke(a):
     print(f"{n // len(d.files)} texts")
 
 
+FONT_DIR = "/System/Library/Fonts"
+FONT_ALIASES = {"mincho": "ヒラギノ明朝 ProN.ttc", "gothic": "ヒラギノ角ゴシック W6.ttc",
+                "gothic-heavy": "ヒラギノ角ゴシック W8.ttc", "maru": "ヒラギノ丸ゴ ProN W4.ttc"}
+
+
+def font_path(name):
+    """別名（mincho 等）かファイルの場所から、実際のフォントファイルの場所を返す。"""
+    import unicodedata
+    if name in FONT_ALIASES:
+        want = unicodedata.normalize("NFC", FONT_ALIASES[name])
+        for f in os.listdir(FONT_DIR):
+            if unicodedata.normalize("NFC", f) == want:
+                return os.path.join(FONT_DIR, f)
+        die(f"フォントが見つからない: {FONT_ALIASES[name]}")
+    p = os.path.expanduser(name)
+    if not os.path.isfile(p):
+        die(f"フォントのファイルが無い: {p}")
+    return p
+
+
+def _rgb(hexc):
+    h = hexc.lstrip("#")
+    return [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+
+
+def _is_kana(ch):
+    return "\u3041" <= ch <= "\u309f"  # ひらがな（記号・カタカナは縮めない）
+
+
+def _split_kana(styles, text, scale):
+    """ひらがなだけ文字の大きさを scale 倍にするよう、文字スタイルを区間ごとに分ける。"""
+    out = []
+    for st in styles:
+        a, b = st["range"]
+        i = a
+        while i < b:
+            k = _is_kana(text[i])
+            j = i
+            while j < b and _is_kana(text[j]) == k:
+                j += 1
+            seg = json.loads(json.dumps(st))
+            seg["range"] = [i, j]
+            if k:
+                seg["size"] = round(st["size"] * scale, 1)
+            out.append(seg)
+            i = j
+    return out
+
+
+def cmd_text_look(a):
+    # CapCut 9.8 の画面で設定して保存された形に合わせて書く（2026-11-17 に確認）
+    d = Draft(a.draft)
+    segs = resolve_ids(d.main, a.ids)
+    want = {s["material_id"] for t in d.main["tracks"] for s in t["segments"] if s["id"] in segs}
+    fpath = font_path(a.font) if a.font else None
+    n = 0
+    for _, doc in d.each():
+        for m in doc.get("materials", {}).get("texts", []):
+            if m["id"] not in want:
+                continue
+            c = json.loads(m["content"])
+            styles = c.get("styles", [])
+            if fpath:
+                m["font_path"] = fpath
+                for st in styles:
+                    st["font"] = {"path": fpath, "id": ""}
+            if a.spacing is not None:
+                m["letter_spacing"] = a.spacing / 20   # 画面の「文字」の値 -1 が -0.05
+            if a.opacity is not None:
+                m["global_alpha"] = a.opacity
+            if a.no_shadow:
+                m["has_shadow"] = False
+                for st in styles:
+                    st.pop("shadows", None)
+            elif a.shadow_color or a.shadow_alpha is not None:
+                col = a.shadow_color or "#000000"
+                alpha = 0.5 if a.shadow_alpha is None else a.shadow_alpha
+                import math
+                ang = a.shadow_angle
+                m["check_flag"] = m.get("check_flag", 7) | 16
+                m.update(has_shadow=True, shadow_color=col, shadow_alpha=alpha, shadow_distance=a.shadow_distance,
+                         shadow_angle=ang, shadow_smoothing=a.shadow_blur / 100 * 3,
+                         shadow_point={"x": math.cos(math.radians(ang)) * 0.9, "y": math.sin(math.radians(ang)) * 0.9})
+                for st in styles:
+                    st["shadows"] = [{"alpha": alpha, "angle": ang, "distance": a.shadow_distance,
+                                      "diffuse": a.shadow_blur / 100 / 6,   # 画面の「不鮮明さ」40% が 0.0667
+                                      "content": {"render_type": "solid", "solid": {"color": _rgb(col)}},
+                                      "thickness_projection_enable": False, "thickness_projection_angle": ang,
+                                      "thickness_projection_distance": 0}]
+            if a.bg_color:
+                m["check_flag"] = m.get("check_flag", 7) | 32 | 16   # 背景を描かせる印（画面で付けると 7→55 になる）
+                m.update(background_style=1, background_color=a.bg_color, background_alpha=a.bg_alpha,
+                         background_round_radius=a.bg_radius, background_width=a.bg_pad, background_height=a.bg_pad)
+            if a.kana_scale and a.kana_scale != 1:
+                styles = _split_kana(styles, c["text"], a.kana_scale)
+            c["styles"] = styles
+            m["content"] = json.dumps(c, ensure_ascii=False)
+            n += 1
+    d.save()
+    print(f"{n // len(d.files)} texts")
+
+
 def cmd_fix_duration(a):
     d = Draft(a.draft)
     for _, doc in d.each():
@@ -332,6 +437,14 @@ def build_parser():
     s = sp.add_parser("text-stroke"); s.add_argument("draft"); s.add_argument("--ids", nargs="*")
     s.add_argument("--width", type=float, default=0.12); s.add_argument("--color", default="#000000")
     s.add_argument("--no-bold", dest="bold", action="store_false"); s.set_defaults(f=cmd_text_stroke)
+    s = sp.add_parser("text-look"); s.add_argument("draft"); s.add_argument("--ids", nargs="+", required=True)
+    s.add_argument("--font"); s.add_argument("--spacing", type=float); s.add_argument("--opacity", type=float)
+    s.add_argument("--shadow-color"); s.add_argument("--shadow-alpha", type=float)
+    s.add_argument("--shadow-blur", type=float, default=40); s.add_argument("--shadow-distance", type=float, default=5)
+    s.add_argument("--shadow-angle", type=float, default=-45); s.add_argument("--no-shadow", action="store_true")
+    s.add_argument("--bg-color"); s.add_argument("--bg-alpha", type=float, default=0.8)
+    s.add_argument("--bg-radius", type=float, default=0.0); s.add_argument("--bg-pad", type=float, default=0.14)
+    s.add_argument("--kana-scale", type=float); s.set_defaults(f=cmd_text_look)
     s = sp.add_parser("fix-duration"); s.add_argument("draft"); s.set_defaults(f=cmd_fix_duration)
     s = sp.add_parser("fill-effects"); s.add_argument("draft"); s.set_defaults(f=cmd_fill_effects)
     s = sp.add_parser("info"); s.add_argument("draft"); s.set_defaults(f=cmd_info)
