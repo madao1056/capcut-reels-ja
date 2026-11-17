@@ -52,6 +52,6 @@ description: CapCut デスクトップ版（Mac）で開ける日本語の縦型
 | 道具 | 使い方 |
 |---|---|
 | `lib/build.py` | 構成表（JSON）から下書きを組む。書式はファイルの先頭に |
-| `lib/crj.py` | 並べ替え・キャンバス・拡大位置・キーフレーム・縁取り・尺の直し（`--help`） |
+| `lib/crj.py` | 並べ替え・キャンバス・拡大位置・キーフレーム・縁取り・クリップのぼかしとHSL・尺の直し（`--help`） |
 | `lib/cc.py` | 型のスクリプトから使う Python の包み |
 | `examples/make_assets.sh` | 見本用の合成素材を作る（ffmpeg） |

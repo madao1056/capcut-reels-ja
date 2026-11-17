@@ -47,4 +47,6 @@ CapCut は保存のときに音の長さなどを 1/30 秒単位に丸めるこ�
 | 文字ごとの大きさ | `styles[]` を文字の区間（`range`）ごとに分け、`size` を変える |
 | 曲線 | 素材の `text_curve` = `{"enable": true, "angle": 強度の度数}`（360 で円）。`check_flag` に 128。背景と同時には使えない |
 | キーフレームのイーズ | `position_y` 等に `easing`（ease-in・ease-out・ease-in-out）を付けると `FreeCurveInOut` と制御点で書かれ、CapCut で効く（text-drop で確認）。`scale` に付けたイーズは直線（`Line`）で書かれた。原因は未確認 |
+| クリップのぼかし | 画面で映像に付けると、効果の段ではなく `materials.video_effects` の1件を映像の `extra_material_refs` から指す形（`bind_segment_id` は空）。強さは `adjust_params` の `effects_adjust_blur`（0〜1）。capcut-cli の `add-effect --bind` は効果の段に置く別の形で、画面の形と違う。`crj.py clip-blur` は画面の形で書く |
+| HSL | `materials.hsl` に色ごと1件（`hsl_color_type` 1赤・2橙・3黄・4緑・5水色・6青・7紫・8赤紫、`hue`・`saturation`・`lightness` は画面の整数）。映像の `extra_material_refs` から指す。`crj.py clip-hsl` |
 | ループ（出ている間くり返す動き） | `material_animations` の `sticker_animation` に `type: "loop"` の1件（`duration` が1周の長さ）。capcut-cli の `text-anim --combo` は入り・出が無いと書けないので `crj.py text-loop` で書く。「回転」は slug `rotate` |

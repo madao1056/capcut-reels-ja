@@ -394,6 +394,76 @@ def cmd_text_loop(a):
     print(f"{len(segs)} texts: {e['title']} {a.dur}s")
 
 
+def _attach(d, ids, kind, build_item, replace=lambda m: True):
+    """セグメントの extra_material_refs に materials[kind] の項目を付ける（画面で付けた形、2026-11-17 確認）。
+    replace(m) が真の既存項目は外してから付け直す。"""
+    segs = set(resolve_ids(d.main, ids))
+    for _, doc in d.each():
+        mats = doc.setdefault("materials", {}).setdefault(kind, [])
+        byid = {m["id"]: m for m in mats}
+        for t in doc.get("tracks", []):
+            for sg in t.get("segments", []):
+                if sg["id"] not in segs:
+                    continue
+                refs = sg.setdefault("extra_material_refs", [])
+                old = [x for x in refs if x in byid and replace(byid[x])]
+                refs[:] = [x for x in refs if x not in old]
+                mats[:] = [m for m in mats if m["id"] not in old]
+                item = build_item()
+                mats.append(item)
+                refs.append(item["id"])
+    return segs
+
+
+BLUR_ID = "7399464929830423813"     # 動画エフェクト → クラシック →「ぼかし」（無料の方）
+HSL_ID = "7501974767453474064"
+HSL_COLORS = {"red": (1, "#FFE64444"), "orange": (2, "#FFE69444"),       # 画面で8色とも付けて確認（2026-11-17）
+              "yellow": (3, "#FFF2F224"), "green": (4, "#FF45E644"),
+              "cyan": (5, "#FF45E6E6"), "blue": (6, "#FF4595E6"),
+              "purple": (7, "#FF9545E6"), "magenta": (8, "#FFE644E6")}
+
+
+def _cached(rid, label):
+    p = effect_index().get(rid)
+    if not p:
+        die(f"{label}が手元にありません。CapCut の画面で一度付けて取得してから使ってください（未取得のまま開くと止まることがあります）")
+    return p
+
+
+def cmd_clip_blur(a):
+    # capcut-cli の add-effect --bind はエフェクト用の段に置く形で、画面で付けた形（クリップに直接付く）と違う
+    import uuid
+    path = _cached(BLUR_ID, "ぼかしの効果")
+    d = Draft(a.draft)
+    item = lambda: {"id": str(uuid.uuid4()).upper(), "effect_id": BLUR_ID, "resource_id": BLUR_ID, "name": "ぼかし",
+                    "type": "video_effect", "sub_type": 0, "bind_segment_id": "", "transparent_params": "", "path": path,
+                    "value": 1.0, "category_id": "2037709426", "category_name": "クラシック", "platform": "all",
+                    "apply_target_type": 0, "source_platform": 1, "version": "", "item_effect_type": 0,
+                    "adjust_params": [{"name": "effects_adjust_blur", "value": a.amount, "default_value": 0.5}],
+                    "time_range": None, "formula_id": "", "apply_time_range": None, "render_index": 11000,
+                    "track_render_index": 0, "common_keyframes": [], "request_id": "", "algorithm_artifact_path": "",
+                    "disable_effect_faces": [], "covering_relation_change": 0, "enable_mask": True, "effect_mask": [],
+                    "enable_video_mask_stroke": True, "enable_video_mask_shadow": True}
+    segs = _attach(d, a.ids, "video_effects", item, lambda m: m.get("resource_id") == BLUR_ID)
+    d.save()
+    print(f"{len(segs)} clips: ぼかし {a.amount}")
+
+
+def cmd_clip_hsl(a):
+    import uuid
+    path = _cached(HSL_ID, "HSL の効果")
+    ctype, ccolor = HSL_COLORS[a.color]
+    d = Draft(a.draft)
+    item = lambda: {"id": str(uuid.uuid4()).upper(), "constant_material_id": str(uuid.uuid4()).upper(),
+                    "hsl_color_type": ctype, "hue": int(a.hue), "saturation": int(a.sat), "lightness": int(a.light),
+                    "interacting": False, "version": "1", "path": path, "type": "hsl",
+                    "lumi_hub_path": os.path.join(path, "lumi_hub_path"), "custom_color": ccolor,
+                    "resource_id": HSL_ID, "source_platform": 1}
+    segs = _attach(d, a.ids, "hsl", item, lambda m: m.get("hsl_color_type") == ctype)
+    d.save()
+    print(f"{len(segs)} clips: HSL {a.color} 色合い{a.hue} 彩度{a.sat} 明るさ{a.light}")
+
+
 def cmd_fix_duration(a):
     d = Draft(a.draft)
     for _, doc in d.each():
@@ -496,6 +566,13 @@ def build_parser():
     s = sp.add_parser("text-loop"); s.add_argument("draft"); s.add_argument("--ids", nargs="+", required=True)
     s.add_argument("--slug", required=True); s.add_argument("--dur", type=float, default=0.5)
     s.set_defaults(f=cmd_text_loop)
+    s = sp.add_parser("clip-blur"); s.add_argument("draft"); s.add_argument("--ids", nargs="+", required=True)
+    s.add_argument("--amount", type=float, default=0.5, help="ぼかしの強さ 0〜1（画面の 0〜100）")
+    s.set_defaults(f=cmd_clip_blur)
+    s = sp.add_parser("clip-hsl"); s.add_argument("draft"); s.add_argument("--ids", nargs="+", required=True)
+    s.add_argument("--color", required=True, choices=list(HSL_COLORS))
+    s.add_argument("--hue", type=float, default=0); s.add_argument("--sat", type=float, default=0)
+    s.add_argument("--light", type=float, default=0); s.set_defaults(f=cmd_clip_hsl)
     s = sp.add_parser("fix-duration"); s.add_argument("draft"); s.set_defaults(f=cmd_fix_duration)
     s = sp.add_parser("fill-effects"); s.add_argument("draft"); s.set_defaults(f=cmd_fill_effects)
     s = sp.add_parser("info"); s.add_argument("draft"); s.set_defaults(f=cmd_info)
