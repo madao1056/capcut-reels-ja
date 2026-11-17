@@ -81,13 +81,17 @@ class Draft:
             cmd += ["--track-name", track]
         return _json(cmd)["segment_id"]
 
-    def text_anim(self, seg, intro=None, intro_dur=0.25, outro=None, outro_dur=0.25):
+    def text_anim(self, seg, intro=None, intro_dur=0.25, outro=None, outro_dur=0.25, loop=None, loop_dur=0.5):
+        """loop は出ている間くり返す動き（例: rotate＝画面の「ループ → 回転」。loop_dur は1周の秒数）。"""
         cmd = ["capcut", "text-anim", self.path, seg, "-q"]
         if intro:
             cmd += ["--intro", intro, "--intro-duration", _sec(intro_dur)]
         if outro:
             cmd += ["--outro", outro, "--outro-duration", _sec(outro_dur)]
-        _run(cmd)
+        if intro or outro:
+            _run(cmd)
+        if loop:   # 入り・出の後に足す（capcut-cli はループだけを付けられない）
+            _run(CRJ + ["text-loop", self.path, "--ids", seg, "--slug", loop, "--dur", str(loop_dur)])
 
     def text_shadow(self, seg, alpha=0.5):
         _run(["capcut", "text-style", self.path, seg, "--shadow", "--shadow-alpha", str(alpha), "-q"])
@@ -99,12 +103,12 @@ class Draft:
 
     def text_look(self, seg, font=None, spacing=None, opacity=None, shadow_color=None, shadow_alpha=None,
                   shadow_blur=40, shadow_distance=5, no_shadow=False, bg_color=None, bg_alpha=0.8, bg_radius=0.0,
-                  bg_pad=0.14, kana_scale=None):
+                  bg_pad=0.14, kana_scale=None, curve=None):
         """書体・文字間隔・透け・影・背景ボックス・ひらがなの縮小（crj text-look）。"""
         cmd = CRJ + ["text-look", self.path, "--ids", seg]
         for k, v in (("--font", font), ("--spacing", spacing), ("--opacity", opacity),
                      ("--shadow-color", shadow_color), ("--shadow-alpha", shadow_alpha), ("--bg-color", bg_color),
-                     ("--kana-scale", kana_scale)):
+                     ("--kana-scale", kana_scale), ("--curve", curve)):
             if v is not None:
                 cmd += [k, str(v)]
         if shadow_color or shadow_alpha is not None:

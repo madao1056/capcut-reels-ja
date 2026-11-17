@@ -14,7 +14,8 @@ spec の書式（相対パスは spec ファイルの場所から、~ も使え�
               "shadow": 0.6, "keyframes": [ {"property": "scale", "time": 0, "value": 1} ],
               "look": {"font": "mincho", "spacing": -1, "opacity": 0.85, "shadow_color": "#2A2A2A",
                        "shadow_alpha": 0.5, "kana_scale": 0.8, "bg_color": "#333333", "bg_alpha": 0.7, "bg_radius": 0.3},
-              "keyframes_jsonl": "kf.jsonl"} ],
+              "keyframes_jsonl": "kf.jsonl",
+              "loop": "rotate", "loop_dur": 3} ],   # loop: 出ている間くり返す動き。look.curve: 360 で文字を円に並べる（背景とは併用不可）
   "audio": [ {"file": "bgm.mp3", "start": 0, "dur": 12.6, "volume": 0.18, "track": "sfx",
               "fade_out": 0.8} ],
   "stroke": {"width": 0.12, "color": "#000000", "bold": true}
@@ -61,9 +62,10 @@ def build(spec, base=".", name=None, drafts=None, log=print):
             d.text_shadow(seg, t["shadow"])
         if "look" in t:   # 書体・文字間隔・透け・影の色・背景ボックス・ひらがな縮小
             d.text_look(seg, **t["look"])
-        if t.get("intro") or t.get("outro"):
+        if t.get("intro") or t.get("outro") or t.get("loop"):
             d.text_anim(seg, intro=t.get("intro"), intro_dur=t.get("intro_dur", 0.25),
-                        outro=t.get("outro"), outro_dur=t.get("outro_dur", 0.25))
+                        outro=t.get("outro"), outro_dur=t.get("outro_dur", 0.25),
+                        loop=t.get("loop"), loop_dur=t.get("loop_dur", 0.5))
         rows = list(t.get("keyframes", []))
         if "keyframes_jsonl" in t:
             rows += [json.loads(l) for l in open(_path(base, t["keyframes_jsonl"])) if l.strip()]

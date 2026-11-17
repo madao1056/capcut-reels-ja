@@ -12,7 +12,9 @@
   text-stroke  <draft> [--ids ...] [--width W] [--color #RRGGBB] [--no-bold]   縁取り・太字
   text-look    <draft> --ids ... [--font mincho|gothic|maru|<path>] [--spacing N] [--opacity A]
                [--shadow-color #RRGGBB --shadow-alpha A --shadow-blur P --shadow-distance D] [--no-shadow]
-               [--bg-color #RRGGBB --bg-alpha A --bg-radius R] [--kana-scale S]   書体・文字間隔・透け・影・背景・かな縮小
+               [--bg-color #RRGGBB --bg-alpha A --bg-radius R] [--kana-scale S] [--curve 角度]
+               書体・文字間隔・透け・影・背景・かな縮小・曲線（円弧。360で円）
+  text-loop    <draft> --ids ... --slug rotate [--dur 秒]   出ている間くり返す文字の動き（画面の「ループ」）
   fix-duration <draft>                                下書き全体の尺を、最後のセグメントの終わりに合わせる
   fill-effects <draft>                                切り替え・文字アニメなどの効果に、手元のキャッシュの場所を書く
   info         <draft>                                書き込み対象のファイルと、CapCut の起動状態を表示
@@ -338,6 +340,12 @@ def cmd_text_look(a):
                 m["check_flag"] = m.get("check_flag", 7) | 32 | 16   # 背景を描かせる印（画面で付けると 7→55 になる）
                 m.update(background_style=1, background_color=a.bg_color, background_alpha=a.bg_alpha,
                          background_round_radius=a.bg_radius, background_width=a.bg_pad, background_height=a.bg_pad)
+            if a.curve:
+                # 画面の「曲線」強度（度）。360 で文字が円に並ぶ。背景をオンにすると画面では曲線を選べない
+                if a.bg_color or m.get("background_style"):
+                    raise SystemExit("曲線と背景は同時に使えません（CapCut の画面でも背景オンだと曲線が選べない）")
+                m["text_curve"] = {"enable": True, "angle": float(a.curve)}
+                m["check_flag"] = m.get("check_flag", 7) | 128   # 画面で付けると 128 が立つ
             if a.kana_scale and a.kana_scale != 1:
                 styles = _split_kana(styles, c["text"], a.kana_scale)
             c["styles"] = styles
@@ -345,6 +353,38 @@ def cmd_text_look(a):
             n += 1
     d.save()
     print(f"{n // len(d.files)} texts")
+
+
+def cmd_text_loop(a):
+    # capcut-cli の text-anim は入り・出が無いとループだけを付けられないので、画面で付けた形に合わせて書く（2026-11-17 確認）
+    import uuid
+    r = subprocess.run(["capcut", "enums", "x", "--text-loop-anims"], capture_output=True, text=True)
+    hit = [e for e in json.loads(r.stdout or "[]") if e["slug"] == a.slug]
+    if not hit:
+        die(f"ループの名前 {a.slug} がありません（capcut enums x --text-loop-anims で一覧）")
+    e = hit[0]
+    d = Draft(a.draft)
+    segs = set(resolve_ids(d.main, a.ids))
+    entry = {"id": e["resource_id"], "type": "loop", "start": 0, "duration": int(a.dur * 1e6), "path": "",
+             "platform": "all", "resource_id": e["resource_id"], "third_resource_id": e["resource_id"],
+             "source_platform": 1, "name": e["title"], "category_id": "xunhuan", "category_name": "text",
+             "panel": "", "material_type": "sticker", "anim_adjust_params": None, "request_id": ""}
+    for _, doc in d.each():
+        anims = doc.setdefault("materials", {}).setdefault("material_animations", [])
+        byid = {m["id"]: m for m in anims}
+        for t in doc.get("tracks", []):
+            for sg in t.get("segments", []):
+                if sg["id"] not in segs:
+                    continue
+                refs = sg.setdefault("extra_material_refs", [])
+                ma = next((byid[x] for x in refs if x in byid and byid[x].get("type") == "sticker_animation"), None)
+                if ma is None:
+                    ma = {"id": str(uuid.uuid4()).upper(), "type": "sticker_animation", "multi_language_current": "none",
+                          "animations": []}
+                    anims.append(ma); byid[ma["id"]] = ma; refs.append(ma["id"])
+                ma["animations"] = [x for x in ma.get("animations", []) if x.get("type") != "loop"] + [dict(entry)]
+    d.save()
+    print(f"{len(segs)} texts: {e['title']} {a.dur}s")
 
 
 def cmd_fix_duration(a):
@@ -444,7 +484,11 @@ def build_parser():
     s.add_argument("--shadow-angle", type=float, default=-45); s.add_argument("--no-shadow", action="store_true")
     s.add_argument("--bg-color"); s.add_argument("--bg-alpha", type=float, default=0.8)
     s.add_argument("--bg-radius", type=float, default=0.0); s.add_argument("--bg-pad", type=float, default=0.14)
-    s.add_argument("--kana-scale", type=float); s.set_defaults(f=cmd_text_look)
+    s.add_argument("--kana-scale", type=float); s.add_argument("--curve", type=float)
+    s.set_defaults(f=cmd_text_look)
+    s = sp.add_parser("text-loop"); s.add_argument("draft"); s.add_argument("--ids", nargs="+", required=True)
+    s.add_argument("--slug", required=True); s.add_argument("--dur", type=float, default=0.5)
+    s.set_defaults(f=cmd_text_loop)
     s = sp.add_parser("fix-duration"); s.add_argument("draft"); s.set_defaults(f=cmd_fix_duration)
     s = sp.add_parser("fill-effects"); s.add_argument("draft"); s.set_defaults(f=cmd_fill_effects)
     s = sp.add_parser("info"); s.add_argument("draft"); s.set_defaults(f=cmd_info)
