@@ -1,0 +1,219 @@
+{
+ "name": "result_first_sample",
+ "ratio": "9:16",
+ "clips": [
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 8,
+   "dur": 1.6,
+   "volume": 0.7,
+   "scale": 3.2,
+   "y": 0.0,
+   "transition": {
+    "slug": "white-flash",
+    "dur": 0.3
+   }
+  },
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 0,
+   "dur": 1.0,
+   "volume": 0.7,
+   "scale": 3.2,
+   "y": 0.0
+  },
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 1.5,
+   "dur": 1.1,
+   "volume": 0.7,
+   "scale": 3.2,
+   "y": 0.0
+  },
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 3,
+   "dur": 1.1,
+   "volume": 0.7,
+   "scale": 3.2,
+   "y": 0.0
+  },
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 4.5,
+   "dur": 1.2,
+   "volume": 0.7,
+   "scale": 3.2,
+   "y": 0.0
+  },
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 6,
+   "dur": 1.4,
+   "volume": 0.7,
+   "scale": 3.2,
+   "y": 0.0,
+   "transition": {
+    "slug": "white-flash",
+    "dur": 0.3
+   }
+  },
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 7,
+   "dur": 3.0,
+   "volume": 0.7,
+   "scale": 1.0,
+   "y": 0.0
+  }
+ ],
+ "texts": [
+  {
+   "text": "結果",
+   "start": 0,
+   "dur": 1.6,
+   "size": 30,
+   "color": "#FFE14D",
+   "y": 0.3,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25
+  },
+  {
+   "text": "一言で添える",
+   "start": 0,
+   "dur": 1.6,
+   "size": 12,
+   "color": "#FFFFFF",
+   "y": 0.12,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25,
+   "track": "sub"
+  },
+  {
+   "text": "3分前…",
+   "start": 1.6,
+   "dur": 1.0,
+   "size": 18,
+   "color": "#FFFFFF",
+   "y": 0.3,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25
+  },
+  {
+   "text": "途中1",
+   "start": 2.6,
+   "dur": 1.1,
+   "size": 20,
+   "color": "#FFFFFF",
+   "y": 0.3,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25
+  },
+  {
+   "text": "途中2",
+   "start": 3.7,
+   "dur": 1.1,
+   "size": 18,
+   "color": "#FFFFFF",
+   "y": 0.3,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25
+  },
+  {
+   "text": "途中3",
+   "start": 4.8,
+   "dur": 1.2,
+   "size": 20,
+   "color": "#FFFFFF",
+   "y": 0.3,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25
+  },
+  {
+   "text": "山場！",
+   "start": 6.0,
+   "dur": 1.4,
+   "size": 22,
+   "color": "#FFE14D",
+   "y": 0.3,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25
+  },
+  {
+   "text": "結果の数字",
+   "start": 7.4,
+   "dur": 3.0,
+   "size": 20,
+   "color": "#FFE14D",
+   "y": 0.55,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25
+  },
+  {
+   "text": "一言で添える",
+   "start": 7.4,
+   "dur": 3.0,
+   "size": 14,
+   "color": "#FFFFFF",
+   "y": 0.4,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25,
+   "track": "sub"
+  },
+  {
+   "text": "続きはプロフィールから",
+   "start": 8.4,
+   "dur": 2.0,
+   "size": 10,
+   "color": "#FFFFFF",
+   "y": -0.58,
+   "shadow": 0.6,
+   "intro": "pop-up",
+   "intro_dur": 0.25,
+   "track": "cta"
+  }
+ ],
+ "audio": [
+  {
+   "file": "../../examples/assets/bgm.wav",
+   "start": 0,
+   "dur": "end",
+   "volume": 0.18,
+   "fade_out": 0.8
+  },
+  {
+   "file": "../../examples/assets/hit.wav",
+   "start": 0,
+   "dur": 0.4,
+   "volume": 0.8,
+   "track": "sfx"
+  },
+  {
+   "file": "../../examples/assets/whoosh.wav",
+   "start": 1.5,
+   "dur": 0.4,
+   "volume": 0.8,
+   "track": "sfx2"
+  },
+  {
+   "file": "../../examples/assets/hit.wav",
+   "start": 7.4,
+   "dur": 0.4,
+   "volume": 0.8,
+   "track": "sfx"
+  }
+ ],
+ "stroke": {
+  "width": 0.08,
+  "color": "#000000"
+ }
+}

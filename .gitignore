@@ -1,0 +1,8 @@
+_work/
+_backup/
+_preview/
+.DS_Store
+__pycache__/
+*.pyc
+test-assets/
+examples/assets/

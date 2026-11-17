@@ -1,0 +1,57 @@
+{
+ "name": "center_band_sample",
+ "ratio": "9:16",
+ "clips": [
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 0,
+   "dur": 2.5
+  },
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 3,
+   "dur": 3
+  },
+  {
+   "file": "../../examples/assets/landscape.mp4",
+   "src_start": 7,
+   "dur": 3
+  }
+ ],
+ "texts": [
+  {
+   "text": "何の話か（フック）",
+   "start": 0,
+   "dur": 2.5,
+   "size": 13,
+   "y": 0.6
+  },
+  {
+   "text": "状況を一言で",
+   "start": 2.5,
+   "dur": 3,
+   "size": 12,
+   "y": 0.6
+  },
+  {
+   "text": "結果は大きく\n色を変える",
+   "start": 5.5,
+   "dur": 3,
+   "size": 14,
+   "color": "#FFE14D",
+   "y": 0.6
+  },
+  {
+   "text": "続きはプロフィールから",
+   "start": 6.5,
+   "dur": 2,
+   "size": 10,
+   "y": -0.58,
+   "track": "cta"
+  }
+ ],
+ "stroke": {
+  "width": 0.08,
+  "color": "#000000"
+ }
+}
