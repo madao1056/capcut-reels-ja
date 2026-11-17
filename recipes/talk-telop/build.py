@@ -53,6 +53,26 @@ def _cut_rank(text, i):
     return None
 
 
+# 行頭のつなぎ言葉（話し言葉の癖）。テロップは話した通りに書き起こさない
+FILLER_HEAD = ("えーっと", "えーと", "えっと", "えー", "ええと", "あのー", "あの、", "まあ、", "まぁ、", "ま、", "で、", "でー", "んで", "なんか、")
+FILLER_THEN = ("それから", "そのあと", "その後", "次に", "あと", "これ", "それ", "そこ", "そう", "今度")
+
+
+def clean(text):
+    """行頭のつなぎ言葉を削る（「でそれから」→「それから」「えー、まず」→「まず」）。
+    「でも」「できる」のように言葉の一部の「で」は残す。"""
+    t = text.strip()
+    while True:
+        before = t
+        for f in FILLER_HEAD:
+            if t.startswith(f) and len(t) > len(f):
+                t = t[len(f):].lstrip("、 　")
+        if t.startswith("で") and t[1:].startswith(FILLER_THEN):
+            t = t[1:]
+        if t == before:
+            return t
+
+
 def wrap(text):
     """15文字を超えたら、真ん中に近い言葉の切れ目で2行にする。3行以上にはしない。"""
     if "\n" in text:
@@ -93,6 +113,7 @@ def main():
     ap.add_argument("--dur", type=float)
     ap.add_argument("--size", type=float, default=18, help="答えの文字の大きさ（CapCut の数値）")
     ap.add_argument("--shadow-color")
+    ap.add_argument("--keep-fillers", action="store_true", help="行頭のつなぎ言葉（で・えー等）を削らない")
     ap.add_argument("--name", default="talk_telop")
     ap.add_argument("--drafts")
     a = ap.parse_args()
@@ -105,7 +126,7 @@ def main():
     texts = []
     # 答え: 項目ごとに差し替え、ふわっと出す。2行のときは下へ伸ばし、1行目の位置をそろえる
     for c in caps:
-        body = wrap(c["text"])
+        body = wrap(c["text"] if a.keep_fillers else clean(c["text"]))
         c["_lines"] = body.count("\n") + 1
         texts.append({"text": body, "start": c["start"], "dur": round(c["end"] - c["start"], 3),
                       "size": a.size, "y": round(ANSWER_Y - (c["_lines"] - 1) * LINE_H, 3), "intro": "blur", "intro_dur": 0.4,

@@ -249,12 +249,19 @@ def cmd_text_stroke(a):
 
 FONT_DIR = "/System/Library/Fonts"
 FONT_ALIASES = {"mincho": "ヒラギノ明朝 ProN.ttc", "gothic": "ヒラギノ角ゴシック W6.ttc",
-                "gothic-heavy": "ヒラギノ角ゴシック W8.ttc", "maru": "ヒラギノ丸ゴ ProN W4.ttc"}
+                "gothic-heavy": "ヒラギノ角ゴシック W8.ttc", "maru": "ヒラギノ丸ゴ ProN W4.ttc",
+                # 欧文（macOS に元から入っている物）
+                "serif-bold": "/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf",
+                "script": "/System/Library/Fonts/Supplemental/SnellRoundhand.ttc"}
 
 
 def font_path(name):
     """別名（mincho 等）かファイルの場所から、実際のフォントファイルの場所を返す。"""
     import unicodedata
+    if name in FONT_ALIASES and FONT_ALIASES[name].startswith("/"):
+        if not os.path.isfile(FONT_ALIASES[name]):
+            die(f"フォントが見つからない: {FONT_ALIASES[name]}")
+        return FONT_ALIASES[name]
     if name in FONT_ALIASES:
         want = unicodedata.normalize("NFC", FONT_ALIASES[name])
         for f in os.listdir(FONT_DIR):
