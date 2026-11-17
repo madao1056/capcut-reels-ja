@@ -1,0 +1,13 @@
+{"name":"text_drop_sample","ratio":"9:16",
+ "clips":[{"file":"../../examples/assets/portrait.mp4","src_start":0,"dur":4}],
+ "texts":[{"text":"上を見るな！","start":0.5,"dur":3.5,"size":16,"color":"#FFFFFF","y":0.45,
+   "look":{"font":"gothic-heavy"},
+   "keyframes":[
+     {"property":"position_y","time":0,"value":1.4,"easing":"ease-in"},
+     {"property":"position_y","time":0.35,"value":0.4,"easing":"ease-out"},
+     {"property":"position_y","time":0.5,"value":0.47,"easing":"ease-in-out"},
+     {"property":"position_y","time":0.65,"value":0.45},
+     {"property":"scale","time":0,"value":1.6},
+     {"property":"scale","time":0.35,"value":1.0}]}],
+ "audio":[{"file":"../../examples/assets/hit.m4a","start":0.85,"volume":0.8,"track":"sfx"}],
+ "stroke":{"width":0.1,"color":"#000000","bold":true}}

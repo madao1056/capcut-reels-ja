@@ -46,4 +46,5 @@ CapCut は保存のときに音の長さなどを 1/30 秒単位に丸めるこ�
 | 背景 | 素材の `background_style` 1・`background_color`・`background_alpha`・`background_round_radius`・`background_width/height`（余白）。`check_flag` に 32 |
 | 文字ごとの大きさ | `styles[]` を文字の区間（`range`）ごとに分け、`size` を変える |
 | 曲線 | 素材の `text_curve` = `{"enable": true, "angle": 強度の度数}`（360 で円）。`check_flag` に 128。背景と同時には使えない |
+| キーフレームのイーズ | `position_y` 等に `easing`（ease-in・ease-out・ease-in-out）を付けると `FreeCurveInOut` と制御点で書かれ、CapCut で効く（text-drop で確認）。`scale` に付けたイーズは直線（`Line`）で書かれた。原因は未確認 |
 | ループ（出ている間くり返す動き） | `material_animations` の `sticker_animation` に `type: "loop"` の1件（`duration` が1周の長さ）。capcut-cli の `text-anim --combo` は入り・出が無いと書けないので `crj.py text-loop` で書く。「回転」は slug `rotate` |
