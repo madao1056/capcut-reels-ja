@@ -46,6 +46,7 @@ description: CapCut デスクトップ版（Mac）で開ける日本語の縦型
 - `teaser-cards` 予告イントロ。黒地の一言の札と映像を拍で交互に出し、2語の題で止める（告知）
 - `dissolve` 継ぎ目の無い切り替え。次のカットを重ねて不透明度0→100で溶かす（景色・作業の流れ）。`clips[].dissolve` で他の型にも使える
 - `pass-behind` テロップをくぐる。途中から人物が文字の手前に出る（人物の切り抜きは Mac 標準の Vision で作る。有料の自動削除は使わない）。`clips[].behind_from` で他の型にも使える
+- `freeze-intro` 決めポーズで止める自己紹介。止めたコマの人物に紙の質感の白い縁と影を付けてゆっくり寄り、名前と肩書きを出す（`recipes/freeze-intro/build.py`）
 
 構成の型（見せ方の型と組み合わせる）:
 - `industry-food` 飲食店 / `industry-beauty` 美容サロン / `industry-farm` 農業・生産者 / `industry-local` 士業・地域の会社

@@ -10,6 +10,7 @@ macOS 標準の Vision（人物セグメンテーション）で各コマの人�
 書き出しは HEVC の透過（.mov、4秒で約7MB）。--prores で ProRes 4444（約280MB。HEVC が読めない環境向け）。
 どちらも CapCut 9.8.0（Mac）で透過として読まれることを確認済み。
 -o を省くと ~/.cache/capcut-reels-ja/cutout/ に、素材・区間ごとに1回だけ作る。
+freeze() は1コマで止める部品（背景の .mp4 と、紙の質感の縁を付けた人物の透過 .mov）を作る（型 freeze-intro）。
 """
 import argparse
 import hashlib
@@ -81,6 +82,57 @@ def cutout(src, src_start, dur, out=None, prores=False, quality="balanced"):
                         "-framerate", str(fps), "-i", os.path.join(mk, "%05d.png"),
                         "-filter_complex", graph, "-map", "[o]", "-an", *enc, out], check=True)
     return out
+
+
+def freeze(src, at, hold, out_dir=None, border=0.018, paper="#F7F3EA", shadow=0.35, bg_dim=0.08, bg_blur=3.0,
+           quality="accurate"):
+    """src の at 秒のコマで止める部品を作る。(背景の .mp4, 縁取りした人物の透過 .mov) を返す。
+    border は縁の太さ（画面の短い辺に対する割合）。縁は paper の色に細かいざらつきを足した紙の質感。
+    背景は少し暗く・ぼかして、手前の人物を浮かせる（bg_dim=0・bg_blur=0 でそのまま）。"""
+    src = os.path.abspath(os.path.expanduser(src))
+    key = hashlib.sha1(f"{src}|{os.path.getmtime(src)}|{at}|{hold}|{border}|{paper}|{shadow}|{bg_dim}|{bg_blur}|"
+                       f"{quality}".encode()).hexdigest()[:16]
+    out_dir = out_dir or os.path.join(CACHE, "freeze")
+    os.makedirs(out_dir, exist_ok=True)
+    base = os.path.join(out_dir, f"{os.path.splitext(os.path.basename(src))[0]}_{key}")
+    bg, fg = base + "_bg.mp4", base + "_cut.mov"
+    if os.path.exists(bg) and os.path.exists(fg):
+        return bg, fg
+    w, h, fps = _probe(src)
+    r = max(2, round(min(w, h) * border))
+    exe = _binary()
+    with tempfile.TemporaryDirectory() as td:
+        fr, mk = os.path.join(td, "f"), os.path.join(td, "m")
+        os.makedirs(fr)
+        frame = os.path.join(fr, "00001.png")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(at), "-i", src, "-frames:v", "1", frame], check=True)
+        subprocess.run([exe, fr, mk, quality], check=True)
+        mask = os.path.join(mk, "00001.png")
+        # 人物のふち（少しぼかす）、縁（ぼかしてから二値にして膨らませる）、影（縁をずらしてぼかす）
+        sd = max(2, r // 2)
+        graph = (f"[1:v]scale={w}:{h},format=gray,split=2[m0][m1];"
+                 f"[m0]gblur=sigma=1.5[ma];"
+                 f"[m1]gblur=sigma={r / 1.6:.2f},lut=y='if(gt(val,10),255,0)',gblur=sigma=1.2,split=2[mb][ms];"
+                 f"[0:v]format=rgba[f];[f][ma]alphamerge[person];"
+                 f"color=c={paper}:s={w}x{h},noise=alls=14:allf=t,format=rgba[pp];[pp][mb]alphamerge[edge];"
+                 f"color=c=black:s={w}x{h},format=rgba[sk];[ms]gblur=sigma={sd}[msb];[sk][msb]alphamerge,"
+                 f"colorchannelmixer=aa={shadow}[sh];"
+                 f"color=c=black@0:s={w}x{h},format=rgba[cv];"
+                 f"[cv][sh]overlay=x={sd}:y={sd}:format=auto[c1];[c1][edge]overlay=format=auto[c2];"
+                 f"[c2][person]overlay=format=auto,format=rgba[o]")
+        still = os.path.join(td, "cut.png")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", frame, "-i", mask, "-filter_complex", graph,
+                        "-map", "[o]", "-frames:v", "1", still], check=True)
+        shutil.copy(still, base + "_cut.png")   # 確認用
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-framerate", str(fps), "-t", str(hold),
+                        "-i", still, "-vf", "format=bgra", "-c:v", "hevc_videotoolbox", "-alpha_quality", "0.75",
+                        "-b:v", "12M", "-tag:v", "hvc1", fg], check=True)
+        look = [f"eq=brightness={-bg_dim}:saturation={1 - bg_dim * 2}"] if bg_dim else []
+        look += [f"gblur=sigma={bg_blur}"] if bg_blur else []
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-framerate", str(fps), "-t", str(hold),
+                        "-i", frame, "-vf", ",".join(look + ["format=yuv420p"]), "-c:v", "libx264", "-crf", "16",
+                        bg], check=True)
+    return bg, fg
 
 
 def main():

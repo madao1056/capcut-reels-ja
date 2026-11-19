@@ -11,6 +11,9 @@ spec の書式（相対パスは spec ファイルの場所から、~ も使え�
               "transition": {"slug": "white-flash", "dur": 0.3},
               "dissolve": 1.0,      # dissolve: 前のクリップの終わり N 秒に重ねて溶かす（2本目以降。全体は N 秒縮む）
               "behind_from": 1.5} ],  # behind_from: クリップの頭から N 秒後以降、人物を文字の手前に出す（文字をくぐる）
+  "overlays": [ {"file": "cut.mov", "at": 2.0, "dur": 3.0, "src_start": 0, "track": "overlay",
+                 "scale": 1.0, "x": 0, "y": 0, "keyframes": [ {"property": "scale", "time": 0, "value": 1} ]} ],
+                # overlays: 指定の時刻に重ねる映像（透過の .mov も可）。文字より下の段に入る
   "texts": [ {"text": "38cm", "start": 0, "dur": 1.5, "size": 24, "color": "#FFE14D",
               "x": 0, "y": 0.3, "track": "sub", "intro": "pop-up", "intro_dur": 0.25,
               "shadow": 0.6, "keyframes": [ {"property": "scale", "time": 0, "value": 1} ],
@@ -74,6 +77,15 @@ def build(spec, base=".", name=None, drafts=None, log=print):
             d.volume(seg, c["volume"])
         if "transition" in c:
             d.transition(seg, c["transition"]["slug"], c["transition"].get("dur", 0.3))
+
+    # 重ねる映像（文字より下の段）
+    for o in spec.get("overlays", []):
+        seg = d.add_clip(_path(base, o["file"]), o.get("src_start", 0), o["dur"], track=o.get("track", "overlay"),
+                         at=o["at"])
+        if any(k in o for k in ("scale", "x", "y")):
+            d.set_clip([seg], scale=o.get("scale"), x=o.get("x"), y=o.get("y"))
+        if o.get("keyframes"):
+            d.keyframes(seg, o["keyframes"])
 
     text_ids = []
     for t in spec.get("texts", []):

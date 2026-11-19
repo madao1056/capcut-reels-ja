@@ -52,4 +52,5 @@ CapCut は保存のときに音の長さなどを 1/30 秒単位に丸めるこ�
 | HSL | `materials.hsl` に色ごと1件（`hsl_color_type` 1赤・2橙・3黄・4緑・5水色・6青・7紫・8赤紫、`hue`・`saturation`・`lightness` は画面の整数）。映像の `extra_material_refs` から指す。`crj.py clip-hsl` |
 | ループ（出ている間くり返す動き） | `material_animations` の `sticker_animation` に `type: "loop"` の1件（`duration` が1周の長さ）。capcut-cli の `text-anim --combo` は入り・出が無いと書けないので `crj.py text-loop` で書く。「回転」は slug `rotate` |
 | 段の重なり順 | `tracks` 配列の順番が下から上の重なり順。CapCut は開くたびに、配列の順から各セグメントの `track_render_index` を振り直す。文字も映像も同じ並びで、映像の段を文字の段より後ろに置けば文字の上に描かれる（`crj.py raise-track`）。その並びでは、タイムラインに文字の段が表示されない（描画は正しく、プレビューで文字を選べる。原因は未確認） |
+| 段が表示されない件の補足 | `raise-track` を使わず、重ねる映像の段を文字の段より前に置いた下書き（freeze-intro）でも、重ねた映像の段と文字の段の1つがタイムラインに表示されなかった。描画は正しい。原因は未確認 |
 | 透過の動画 | HEVC の透過（`hevc_videotoolbox -alpha_quality`、`.mov`・`hvc1`）も ProRes 4444（`yuva444p10le`）も、重ねる段に置くだけで透過として描かれる。ブレンドなどの設定は要らない（9.8.0 で確認） |
