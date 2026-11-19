@@ -9,7 +9,8 @@ spec の書式（相対パスは spec ファイルの場所から、~ も使え�
   "clips": [ {"file": "a.mp4", "src_start": 3.0, "dur": 1.5,
               "scale": 4.0, "x": 0, "y": -0.27, "volume": 0.7,
               "transition": {"slug": "white-flash", "dur": 0.3},
-              "dissolve": 1.0} ],   # dissolve: 前のクリップの終わり N 秒に重ねて溶かす（2本目以降。全体は N 秒縮む）
+              "dissolve": 1.0,      # dissolve: 前のクリップの終わり N 秒に重ねて溶かす（2本目以降。全体は N 秒縮む）
+              "behind_from": 1.5} ],  # behind_from: クリップの頭から N 秒後以降、人物を文字の手前に出す（文字をくぐる）
   "texts": [ {"text": "38cm", "start": 0, "dur": 1.5, "size": 24, "color": "#FFE14D",
               "x": 0, "y": 0.3, "track": "sub", "intro": "pop-up", "intro_dur": 0.25,
               "shadow": 0.6, "keyframes": [ {"property": "scale", "time": 0, "value": 1} ],
@@ -30,6 +31,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cc  # noqa: E402
+import cutout  # noqa: E402
 
 
 def _path(base, p):
@@ -42,6 +44,7 @@ def build(spec, base=".", name=None, drafts=None, log=print):
     total = 0.0
     clip_ids = []
     fades = []
+    behinds = []
     for i, c in enumerate(spec.get("clips", [])):
         ov = c.get("dissolve", 0) if i else 0
         if ov and not 0 < ov < c["dur"]:
@@ -54,6 +57,11 @@ def build(spec, base=".", name=None, drafts=None, log=print):
             fades.append((head, ov, c))
         seg = d.add_clip(_path(base, c["file"]), src + ov, c["dur"] - ov)
         clip_ids.append(seg)
+        if "behind_from" in c:
+            bf = c["behind_from"]
+            if not 0 <= bf < c["dur"] - ov:
+                raise SystemExit(f"clips[{i}] の behind_from（{bf}秒）は、0 以上・クリップの長さ未満にしてください")
+            behinds.append((c, round(total + bf, 6), src + ov + bf, round(c["dur"] - ov - bf, 6)))
         total += c["dur"] - ov
         if any(k in c for k in ("scale", "x", "y")):
             d.set_clip([seg] + ([head] if ov else []), scale=c.get("scale"), x=c.get("x"), y=c.get("y"))
@@ -85,6 +93,15 @@ def build(spec, base=".", name=None, drafts=None, log=print):
             rows += [json.loads(l) for l in open(_path(base, t["keyframes_jsonl"])) if l.strip()]
         if rows:
             d.keyframes(seg, rows)
+
+    # 文字をくぐる: 人物だけ残した透過動画を、指定の時刻から文字より上の段に重ねる
+    for c, at, src, dur in behinds:
+        mov = cutout.cutout(_path(base, c["file"]), src, dur, quality=c.get("cutout_quality", "balanced"))
+        seg = d.add_clip(mov, 0, dur, track="cutout", at=at)
+        if any(k in c for k in ("scale", "x", "y")):
+            d.set_clip([seg], scale=c.get("scale"), x=c.get("x"), y=c.get("y"))
+    if behinds:
+        d.raise_track("cutout")
 
     for a in spec.get("audio", []):
         dur = total if a.get("dur") == "end" else a.get("dur")

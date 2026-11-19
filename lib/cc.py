@@ -63,6 +63,9 @@ class Draft:
             cmd += ["--track", track, "--at", str(at)]
         return _run(cmd)
 
+    def raise_track(self, track):
+        return _run(CRJ + ["raise-track", self.path, track])
+
     def set_clip(self, ids, scale=None, x=None, y=None):
         cmd = CRJ + ["set-clip", self.path, *ids]
         for k, v in (("--scale", scale), ("--x", x), ("--y", y)):

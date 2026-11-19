@@ -1,0 +1,5 @@
+{"name":"pass_behind_sample","ratio":"9:16",
+ "clips":[{"file":"../../examples/assets/portrait.mp4","src_start":0,"dur":4,"behind_from":1.5}],
+ "texts":[{"text":"テロップをくぐる","start":0,"dur":4,"size":16,"color":"#FFE14D","y":0.35,
+   "look":{"font":"gothic-heavy"}}],
+ "stroke":{"width":0.1,"color":"#000000","bold":true}}

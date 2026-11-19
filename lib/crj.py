@@ -5,6 +5,7 @@
 ここでは capcut-cli だけでは起きる落とし穴を避けるための操作だけを持つ。
 
   add-clip     <draft> <file> <src_start> <dur> [--track 名前 --at 秒]   メイン動画トラックの末尾（--track なら重ねる段の指定時刻）に、元素材の一部を足す
+  raise-track  <draft> <段の名前>                     その段を文字も含めた全体の一番上に描く（人物の切り抜きを文字の手前に出す）
   reorder      <draft> <seg-id>...                    メイン動画トラックを指定順に並べ替え、隙間なく詰める
   set-canvas   <draft> <9:16|1:1|4:5|16:9|WxH>        キャンバスの比率・解像度を変える
   set-clip     <draft> <seg-id>... --scale S [--x X] [--y Y]   拡大率・位置の固定値
@@ -146,6 +147,27 @@ def cmd_add_clip(a):
     if r.returncode:
         die(r.stderr or r.stdout)
     print(seg)
+
+
+def cmd_raise_track(a):
+    d = Draft(a.draft)
+    found = False
+    for _, doc in d.each():
+        tracks = [t for t in doc["tracks"] if t.get("name") == a.track]
+        if not tracks:
+            continue
+        found = True
+        # 描く順は render_index の大きい方が上。文字（15000〜）より上に置くため、全体の最大より上にする
+        others = [s.get("render_index", 0) for t in doc["tracks"] if t not in tracks for s in t["segments"]]
+        top = max(others + [0]) + 1000
+        for t in tracks:
+            for s in t["segments"]:
+                s["render_index"] = top
+            doc["tracks"].remove(t)
+            doc["tracks"].append(t)
+    if not found:
+        die(f"段が見つからない: {a.track}")
+    d.save()
 
 
 def cmd_reorder(a):
@@ -590,6 +612,7 @@ def build_parser():
     s.add_argument("src_start", type=float); s.add_argument("dur", type=float)
     s.add_argument("--track", help="重ねる段の名前（省略時はメイン動画トラックの末尾）")
     s.add_argument("--at", type=float, help="--track のとき置く時刻（秒）"); s.set_defaults(f=cmd_add_clip)
+    s = sp.add_parser("raise-track"); s.add_argument("draft"); s.add_argument("track"); s.set_defaults(f=cmd_raise_track)
     s = sp.add_parser("reorder"); s.add_argument("draft"); s.add_argument("ids", nargs="+"); s.set_defaults(f=cmd_reorder)
     s = sp.add_parser("set-canvas"); s.add_argument("draft"); s.add_argument("ratio"); s.set_defaults(f=cmd_set_canvas)
     s = sp.add_parser("set-clip"); s.add_argument("draft"); s.add_argument("ids", nargs="+")
