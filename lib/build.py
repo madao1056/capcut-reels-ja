@@ -8,7 +8,8 @@ spec の書式（相対パスは spec ファイルの場所から、~ も使え�
   "name": "my_reel", "ratio": "9:16",
   "clips": [ {"file": "a.mp4", "src_start": 3.0, "dur": 1.5,
               "scale": 4.0, "x": 0, "y": -0.27, "volume": 0.7,
-              "transition": {"slug": "white-flash", "dur": 0.3}} ],
+              "transition": {"slug": "white-flash", "dur": 0.3},
+              "dissolve": 1.0} ],   # dissolve: 前のクリップの終わり N 秒に重ねて溶かす（2本目以降。全体は N 秒縮む）
   "texts": [ {"text": "38cm", "start": 0, "dur": 1.5, "size": 24, "color": "#FFE14D",
               "x": 0, "y": 0.3, "track": "sub", "intro": "pop-up", "intro_dur": 0.25,
               "shadow": 0.6, "keyframes": [ {"property": "scale", "time": 0, "value": 1} ],
@@ -40,12 +41,25 @@ def build(spec, base=".", name=None, drafts=None, log=print):
     d = cc.Draft.create(name or spec["name"], ratio=spec.get("ratio", "9:16"), drafts=drafts)
     total = 0.0
     clip_ids = []
-    for c in spec.get("clips", []):
-        seg = d.add_clip(_path(base, c["file"]), c.get("src_start", 0), c["dur"])
+    fades = []
+    for i, c in enumerate(spec.get("clips", [])):
+        ov = c.get("dissolve", 0) if i else 0
+        if ov and not 0 < ov < c["dur"]:
+            raise SystemExit(f"clips[{i}] の dissolve（{ov}秒）は、そのクリップの長さ（{c['dur']}秒）より短くしてください")
+        src = c.get("src_start", 0)
+        if ov:
+            # 継ぎ目の無い切り替え: 頭の ov 秒を重ねる段に置き、前のクリップの終わりに重ねて不透明度 0→1。
+            # 続きはメインに置くので、重ねた段が消える瞬間に同じコマへそのままつながる
+            head = d.add_clip(_path(base, c["file"]), src, ov, track="dissolve", at=round(total - ov, 6))
+            fades.append((head, ov, c))
+        seg = d.add_clip(_path(base, c["file"]), src + ov, c["dur"] - ov)
         clip_ids.append(seg)
-        total += c["dur"]
+        total += c["dur"] - ov
         if any(k in c for k in ("scale", "x", "y")):
-            d.set_clip([seg], scale=c.get("scale"), x=c.get("x"), y=c.get("y"))
+            d.set_clip([seg] + ([head] if ov else []), scale=c.get("scale"), x=c.get("x"), y=c.get("y"))
+    for head, ov, c in fades:
+        d.keyframes(head, [{"property": "alpha", "time": 0, "value": 0, "easing": c.get("dissolve_easing", "linear")},
+                           {"property": "alpha", "time": ov, "value": 1}])
     # 切り替えと音量は、全クリップを並べ終えてから付ける（切り替えは次のクリップとの間に入るため）
     for c, seg in zip(spec.get("clips", []), clip_ids):
         if "volume" in c:

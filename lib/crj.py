@@ -4,7 +4,7 @@
 下書きの読み書きの土台は capcut-cli（https://github.com/renezander030/capcut-cli）。
 ここでは capcut-cli だけでは起きる落とし穴を避けるための操作だけを持つ。
 
-  add-clip     <draft> <file> <src_start> <dur>      メイン動画トラックの末尾に、元素材の一部を足す
+  add-clip     <draft> <file> <src_start> <dur> [--track 名前 --at 秒]   メイン動画トラックの末尾（--track なら重ねる段の指定時刻）に、元素材の一部を足す
   reorder      <draft> <seg-id>...                    メイン動画トラックを指定順に並べ替え、隙間なく詰める
   set-canvas   <draft> <9:16|1:1|4:5|16:9|WxH>        キャンバスの比率・解像度を変える
   set-clip     <draft> <seg-id>... --scale S [--x X] [--y Y]   拡大率・位置の固定値
@@ -125,13 +125,20 @@ def fix_duration_doc(doc):
 
 def cmd_add_clip(a):
     d = Draft(a.draft)
-    track = main_video_track(d.main)
-    pos = 0
-    if track and track["segments"]:
-        last = max(track["segments"], key=lambda s: s["target_timerange"]["start"])
-        pos = last["target_timerange"]["start"] + last["target_timerange"]["duration"]
+    if a.track:   # 重ねる段（オーバーレイ）: 指定の時刻に置く
+        if a.at is None:
+            die("--track を使うときは --at（置く時刻の秒）も指定してください")
+        pos = round(a.at * 1e6)
+        extra = ["--track-name", a.track]
+    else:
+        track = main_video_track(d.main)
+        pos = 0
+        if track and track["segments"]:
+            last = max(track["segments"], key=lambda s: s["target_timerange"]["start"])
+            pos = last["target_timerange"]["start"] + last["target_timerange"]["duration"]
+        extra = []
     # 長さを渡さない: 渡すと素材全体の長さがその秒数で登録され、trim の開始位置が範囲外になる
-    r = subprocess.run(["capcut", "add-video", d.path, a.file, f"{pos / 1e6}s"], capture_output=True, text=True)
+    r = subprocess.run(["capcut", "add-video", d.path, a.file, f"{pos / 1e6}s", *extra], capture_output=True, text=True)
     if r.returncode:
         die(r.stderr or r.stdout)
     seg = json.loads(r.stdout)["segment_id"]
@@ -212,11 +219,47 @@ def cmd_keyframes(a):
                 out.append(json.dumps({**k, "property": p}))
         else:
             out.append(json.dumps(k))
+    before = _keyframe_ids(Draft(a.draft, write=False))
     r = subprocess.run(["capcut", "keyframe", a.draft, a.id, "--batch"], input="\n".join(out) + "\n",
                        capture_output=True, text=True)
     if r.returncode:
         die(r.stderr or r.stdout)
+    _fix_video_keyframes(a.draft, a.id, before)
     print(r.stdout.strip())
+
+
+def _keyframe_ids(d):
+    return {x["id"] for _, doc in d.each() for t in doc["tracks"] for s in t["segments"]
+            for k in s.get("common_keyframes", []) for x in k["keyframe_list"]}
+
+
+def _fix_video_keyframes(draft, seg_prefix, before):
+    """映像のキーフレームを CapCut 9.8 が読む形に直す（画面で付けた物と比べて確認）。
+    - 時刻は素材の頭から数える（区間の頭からではない）。素材の途中から使う区間は、そのぶんずらす
+    - 不透明度（KFTypeAlpha）は、画面の「ブレンド」を入れないと効かない。素材の check_flag に 8 を足す"""
+    d = Draft(draft)
+    sid = resolve_ids(d.main, [seg_prefix])[0]
+    changed = False
+    for _, doc in d.each():
+        vids = {m["id"]: m for m in doc.get("materials", {}).get("videos", [])}
+        for t in doc["tracks"]:
+            if t.get("type") != "video":
+                continue
+            for s in t["segments"]:
+                if s["id"] != sid:
+                    continue
+                src = s.get("source_timerange", {}).get("start", 0)
+                for k in s.get("common_keyframes", []):
+                    new = [x for x in k["keyframe_list"] if x["id"] not in before]
+                    for x in new:
+                        x["time_offset"] += src
+                        changed = True
+                    if new and k["property_type"] == "KFTypeAlpha" and s["material_id"] in vids:
+                        m = vids[s["material_id"]]
+                        m["check_flag"] = m.get("check_flag", 0) | 8
+                        changed = True
+    if changed:
+        d.save()
 
 
 def cmd_text_stroke(a):
@@ -544,7 +587,9 @@ def build_parser():
     p = argparse.ArgumentParser(prog="crj", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest="cmd", required=True)
     s = sp.add_parser("add-clip"); s.add_argument("draft"); s.add_argument("file")
-    s.add_argument("src_start", type=float); s.add_argument("dur", type=float); s.set_defaults(f=cmd_add_clip)
+    s.add_argument("src_start", type=float); s.add_argument("dur", type=float)
+    s.add_argument("--track", help="重ねる段の名前（省略時はメイン動画トラックの末尾）")
+    s.add_argument("--at", type=float, help="--track のとき置く時刻（秒）"); s.set_defaults(f=cmd_add_clip)
     s = sp.add_parser("reorder"); s.add_argument("draft"); s.add_argument("ids", nargs="+"); s.set_defaults(f=cmd_reorder)
     s = sp.add_parser("set-canvas"); s.add_argument("draft"); s.add_argument("ratio"); s.set_defaults(f=cmd_set_canvas)
     s = sp.add_parser("set-clip"); s.add_argument("draft"); s.add_argument("ids", nargs="+")

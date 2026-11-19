@@ -57,8 +57,11 @@ class Draft:
         return cls(path)
 
     # --- 映像 ---
-    def add_clip(self, file, src_start, dur):
-        return _run(CRJ + ["add-clip", self.path, os.path.abspath(os.path.expanduser(file)), str(src_start), str(dur)])
+    def add_clip(self, file, src_start, dur, track=None, at=None):
+        cmd = CRJ + ["add-clip", self.path, os.path.abspath(os.path.expanduser(file)), str(src_start), str(dur)]
+        if track:
+            cmd += ["--track", track, "--at", str(at)]
+        return _run(cmd)
 
     def set_clip(self, ids, scale=None, x=None, y=None):
         cmd = CRJ + ["set-clip", self.path, *ids]

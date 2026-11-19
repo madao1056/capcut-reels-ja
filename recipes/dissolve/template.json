@@ -1,0 +1,6 @@
+{"name":"dissolve_sample","ratio":"9:16",
+ "clips":[{"file":"../../examples/assets/portrait.mp4","src_start":0,"dur":3},
+          {"file":"../../examples/assets/landscape.mp4","src_start":2,"dur":3,"scale":1.8,"dissolve":1.0},
+          {"file":"../../examples/assets/portrait.mp4","src_start":1.5,"dur":3,"dissolve":1.0}],
+ "texts":[{"text":"ふわっと切り替える","start":0.3,"dur":2.5,"size":12,"y":0.3}],
+ "stroke":{"width":0.1,"color":"#000000","bold":true}}
